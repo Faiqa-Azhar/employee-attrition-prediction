@@ -8,7 +8,6 @@
 [![XGBoost](https://img.shields.io/badge/XGBoost-2.0-FF6600)](https://xgboost.readthedocs.io)
 [![SHAP](https://img.shields.io/badge/SHAP-0.44-00C7B7)](https://shap.readthedocs.io)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.29-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io)
-[![License](https://img.shields.io/badge/License-MIT-lightgrey)](LICENSE)
 
 
 ## 1. Project Overview
@@ -322,142 +321,6 @@ MODELS_DIR    = os.path.join(BASE_DIR, "models")
 RANDOM_STATE  = 42
 ```
 
----
-
-## 6. Integration Guide
-
-### Load the Trained Pipeline in Any Python Project
-
-```bash
-pip install scikit-learn==1.3.2 xgboost==2.0.3 \
-            imbalanced-learn==0.11.0 shap==0.44.0 \
-            pandas numpy joblib
-```
-
-```python
-import joblib
-import pandas as pd
-
-# Load the complete fitted pipeline
-pipeline = joblib.load("models/best_model.joblib")
-
-# Prepare one employee record — 30 raw feature columns required
-employee = pd.DataFrame([{
-    "Age": 29, "MonthlyIncome": 2800, "JobLevel": 1,
-    "YearsAtCompany": 3, "TotalWorkingYears": 5,
-    "OverTime": "Yes", "JobSatisfaction": 2,
-    "EnvironmentSatisfaction": 2, "WorkLifeBalance": 2,
-    "RelationshipSatisfaction": 3, "Department": "Sales",
-    "JobRole": "Sales Representative", "MaritalStatus": "Single",
-    "YearsSinceLastPromotion": 2, "YearsWithCurrManager": 2,
-    "Gender": "Male", "BusinessTravel": "Travel_Frequently",
-    "DailyRate": 700, "DistanceFromHome": 12, "Education": 2,
-    "EducationField": "Marketing", "HourlyRate": 55,
-    "JobInvolvement": 2, "MonthlyRate": 14000,
-    "NumCompaniesWorked": 3, "PercentSalaryHike": 11,
-    "PerformanceRating": 3, "StockOptionLevel": 0,
-    "TrainingTimesLastYear": 1, "YearsInCurrentRole": 2
-}])
-
-probability = pipeline.predict_proba(employee)[0][1]
-will_leave  = probability >= 0.30        # tuned threshold
-risk_tier   = (
-    "CRITICAL" if probability >= 0.75 else
-    "HIGH"     if probability >= 0.50 else
-    "MEDIUM"   if probability >= 0.25 else "LOW"
-)
-
-print(f"Prediction:   {'Will Leave' if will_leave else 'Will Stay'}")
-print(f"Probability:  {probability:.1%}")
-print(f"Risk Tier:    {risk_tier}")
-```
-
-### Use FeatureEngineer Standalone
-
-```python
-import sys
-sys.path.insert(0, "src/")
-from preprocessing import FeatureEngineer
-
-fe = FeatureEngineer()
-df_engineered = fe.transform(df_raw)
-# Drops 4 constant/ID columns
-# Maps binary and ordinal categorical features
-# Adds 7 interaction features to the DataFrame
-```
-
-### Threshold Adjustment by HR Capacity
-
-The default threshold of 0.30 is tuned for maximum recall within
-a reasonable precision constraint. Adjust based on your team's
-review capacity:
-
-```python
-THRESHOLD = 0.20   # Recall ~0.92 — flag more, review more
-THRESHOLD = 0.30   # Recall ~0.85 — balanced (recommended)
-THRESHOLD = 0.45   # Recall ~0.72 — flag fewer, higher precision
-```
-
----
-
-## 7. Testing and Quality
-
-### Pipeline Smoke Test
-
-```bash
-cd src
-python -c "
-from preprocessing import FeatureEngineer
-import pandas as pd
-
-fe = FeatureEngineer()
-df = pd.DataFrame([{
-    'Age':30, 'BusinessTravel':'Travel_Rarely', 'DailyRate':800,
-    'Department':'Sales', 'DistanceFromHome':5, 'Education':3,
-    'EducationField':'Life Sciences', 'EmployeeCount':1,
-    'EmployeeNumber':1, 'EnvironmentSatisfaction':3, 'Gender':'Male',
-    'HourlyRate':60, 'JobInvolvement':3, 'JobLevel':2,
-    'JobRole':'Sales Executive', 'JobSatisfaction':3,
-    'MaritalStatus':'Single', 'MonthlyIncome':5000,
-    'MonthlyRate':15000, 'NumCompaniesWorked':2, 'Over18':'Y',
-    'OverTime':'No', 'PercentSalaryHike':13, 'PerformanceRating':3,
-    'RelationshipSatisfaction':3, 'StandardHours':80,
-    'StockOptionLevel':1, 'TotalWorkingYears':8,
-    'TrainingTimesLastYear':2, 'WorkLifeBalance':3,
-    'YearsAtCompany':5, 'YearsInCurrentRole':3,
-    'YearsSinceLastPromotion':1, 'YearsWithCurrManager':3
-}])
-result = fe.transform(df)
-
-assert 'PromotionStagnationIndex' in result.columns, 'FAIL: interaction feature missing'
-assert 'SatisfactionComposite'    in result.columns, 'FAIL: composite feature missing'
-assert 'EmployeeCount'            not in result.columns, 'FAIL: constant column not dropped'
-assert result.shape[1] > 30, 'FAIL: expected more columns after feature engineering'
-
-print(f'FeatureEngineer: PASS')
-print(f'Output shape: {result.shape}')
-print(f'New features: {[c for c in result.columns if c not in df.columns]}')
-"
-```
-
-### Model Prediction Sanity Test
-
-```bash
-cd src
-python -c "
-import joblib
-import sys
-sys.path.insert(0, '.')
-from predict import get_example_employee
-
-pipeline = joblib.load('../models/best_model.joblib')
-emp      = get_example_employee()
-proba    = pipeline.predict_proba(emp)[0][1]
-
-assert 0 <= proba <= 1, f'FAIL: probability {proba} out of [0,1] range'
-print(f'Model prediction: PASS  ({proba:.1%} flight risk)')
-"
-```
 
 ### Coding Standards
 - Follow PEP 8, max line length 100
@@ -520,7 +383,7 @@ employee-attrition-prediction/
 
 > Accuracy is not reported as a headline metric. On an 84/16 imbalanced dataset,
 > a model that predicts "Stay" for every employee scores 84% accuracy and is
-> completely useless. Recall, F1, PR-AUC, and ROC-AUC are the correct metrics
+> completely useless. Recall, F1 and PR-AUC are the correct metrics
 > for this problem.
 
 ---
