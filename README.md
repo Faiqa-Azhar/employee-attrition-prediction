@@ -3,6 +3,8 @@
 > A machine learning system that identifies employees at high flight risk
 > so HR teams can take targeted retention action — before resignations happen.
 
+🔗 **[Live Demo](https://faiqa-azhar-employee-attrition-prediction-app-kmjwgi.streamlit.app/)
+
 [![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)](https://python.org)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-1.3-F7931E?logo=scikit-learn&logoColor=white)](https://scikit-learn.org)
 [![XGBoost](https://img.shields.io/badge/XGBoost-2.0-FF6600)](https://xgboost.readthedocs.io)
